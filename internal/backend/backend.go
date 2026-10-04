@@ -1,10 +1,17 @@
 package backend
 
-import "sync/atomic"
+import (
+	"sync/atomic"
+	"time"
+)
 
 type Backend struct {
-	Addr    string
-	healthy atomic.Bool
+	Name           string
+	Addr           string
+	HealthPath     string
+	HealthInterval time.Duration
+	HealthTimeout  time.Duration
+	healthy        atomic.Bool
 }
 
 func (b *Backend) Healthy() bool     { return b.healthy.Load() }
@@ -14,14 +21,13 @@ type Pool struct {
 	backends []*Backend
 }
 
-func NewPool(addrs ...string) *Pool {
-	p := &Pool{}
-	for _, addr := range addrs {
-		b := &Backend{Addr: addr}
+func New(addr string) *Backend { return &Backend{Addr: addr} }
+
+func NewPool(backends ...*Backend) *Pool {
+	for _, b := range backends {
 		b.healthy.Store(true)
-		p.backends = append(p.backends, b)
 	}
-	return p
+	return &Pool{backends: backends}
 }
 
 func (p *Pool) All() []*Backend { return p.backends }

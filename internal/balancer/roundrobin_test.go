@@ -7,7 +7,7 @@ import (
 )
 
 func TestNextRotates(t *testing.T) {
-	pool := backend.NewPool("a", "b", "c")
+	pool := backend.NewPool(backend.New("a"), backend.New("b"), backend.New("c"))
 	rr := New(pool)
 	got := []string{rr.Next(), rr.Next(), rr.Next(), rr.Next()}
 	want := []string{"a", "b", "c", "a"}
@@ -19,7 +19,7 @@ func TestNextRotates(t *testing.T) {
 }
 
 func TestNextSkipsUnhealthy(t *testing.T) {
-	pool := backend.NewPool("a", "b", "c")
+	pool := backend.NewPool(backend.New("a"), backend.New("b"), backend.New("c"))
 	pool.All()[1].SetHealthy(false)
 	rr := New(pool)
 	got := []string{rr.Next(), rr.Next(), rr.Next(), rr.Next()}
