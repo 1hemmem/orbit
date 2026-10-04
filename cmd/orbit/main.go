@@ -7,11 +7,8 @@ import (
 	"os"
 	"time"
 
-	"orbit/internal/backend"
-	"orbit/internal/balancer"
+	"orbit/internal/app"
 	"orbit/internal/config"
-	"orbit/internal/healthcheck"
-	"orbit/internal/proxy"
 )
 
 func main() {
@@ -24,28 +21,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	backends := make([]*backend.Backend, 0, len(cfg.Backends))
-	for _, b := range cfg.Backends {
-		hc := b.EffectiveHealthCheck(cfg.HealthCheck)
-		backends = append(backends, &backend.Backend{
-			Name:           b.Name,
-			Addr:           b.Addr(),
-			HealthPath:     hc.Path,
-			HealthInterval: hc.Interval,
-			HealthTimeout:  hc.Timeout,
-		})
-	}
-	pool := backend.NewPool(backends...)
-	rr := balancer.New(pool)
-	healthcheck.Start(pool)
-
 	srv := &http.Server{
 		Addr:         cfg.Listen,
-		Handler:      proxy.NewHandler(rr),
+		Handler:      app.NewHandler(cfg),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  30 * time.Second,
 	}
-	slog.Info("orbit listening", "addr", srv.Addr, "backends", len(backends))
+	slog.Info("orbit listening", "addr", srv.Addr, "backends", len(cfg.Backends))
 	slog.Error("server stopped", "err", srv.ListenAndServe())
 }
