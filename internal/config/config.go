@@ -19,10 +19,14 @@ const defaultAlgorithm = "round_robin"
 var namePattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
 type Config struct {
-	Listen      string         `yaml:"listen"`
+	Listeners   []Listener     `yaml:"listeners"`
 	Balancer    BalancerConfig `yaml:"balancer"`
 	HealthCheck HealthCheck    `yaml:"health_check"`
 	Backends    []Backend      `yaml:"backends"`
+}
+
+type Listener struct {
+	Addr string `yaml:"addr"`
 }
 
 type BalancerConfig struct {
@@ -62,7 +66,7 @@ func (b Backend) EffectiveHealthCheck(global HealthCheck) HealthCheck {
 
 func Default() *Config {
 	return &Config{
-		Listen:      ":8080",
+		Listeners:   []Listener{{Addr: ":8080"}},
 		Balancer:    BalancerConfig{Algorithm: defaultAlgorithm},
 		HealthCheck: HealthCheck{Interval: 3 * time.Second, Timeout: 2 * time.Second, Path: "/"},
 	}
@@ -109,8 +113,13 @@ func (c *Config) generateNames() {
 func (c *Config) Validate() error {
 	var errs []error
 
-	if _, _, err := net.SplitHostPort(c.Listen); err != nil {
-		errs = append(errs, fmt.Errorf("listen %q: %w", c.Listen, err))
+	if len(c.Listeners) == 0 {
+		errs = append(errs, errors.New("listeners: at least one listener is required"))
+	}
+	for i, l := range c.Listeners {
+		if _, _, err := net.SplitHostPort(l.Addr); err != nil {
+			errs = append(errs, fmt.Errorf("listeners[%d].addr %q: %w", i, l.Addr, err))
+		}
 	}
 	if c.Balancer.Algorithm != defaultAlgorithm {
 		errs = append(errs, fmt.Errorf("balancer.algorithm %q: only %q is supported", c.Balancer.Algorithm, defaultAlgorithm))

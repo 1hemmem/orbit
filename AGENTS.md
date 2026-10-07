@@ -4,7 +4,7 @@ Minimal HTTP load balancer in Go, configured via `orbit.yaml`.
 
 ## Architecture
 
-- `cmd/orbit`: Main load balancer (listens per `listen` in config; default `:8080`).
+- `cmd/orbit`: Main load balancer (listens per `listeners` list in config; default `:8080`).
 - `cmd/mockserver`: Standalone test backend server (use `-port` flag).
 - `internal/config`: YAML config loader (`orbit.yaml`) with defaults, strict unknown-field rejection, and validation; generates kebab-case backend names when omitted.
 - `internal/backend`: Lock-free pool of configured backends with atomic health statuses.

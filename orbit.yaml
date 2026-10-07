@@ -1,4 +1,5 @@
-listen: ":8080"
+listeners:
+  - addr: ":8080"
 
 balancer:
   algorithm: round_robin

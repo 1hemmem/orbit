@@ -9,7 +9,7 @@ Minimal HTTP load balancer in Go, configured via `orbit.yaml`.
 - [x] Per-backend HTTP health checks (path/interval/timeout configurable)
 - [x] YAML config: defaults, strict unknown-field rejection, validation, generated kebab-case names
 - [x] E2E tests: rotation, failover, 503 when all backends are down
-- [ ] Multiple listeners (config becomes a `listeners:` list)
+- [x] Multiple listeners (config becomes a `listeners:` list)
 - [ ] HTTPS/TLS termination (cert/key per listener, HTTP→HTTPS redirect)
 - [ ] Backend metrics: in-flight requests, request/error counters, latency
 - [ ] More algorithms: least outstanding, weighted round robin, random

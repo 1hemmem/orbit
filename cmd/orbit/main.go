@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -21,13 +22,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	srv := &http.Server{
-		Addr:         cfg.Listen,
-		Handler:      app.NewHandler(cfg),
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  30 * time.Second,
+	handler := app.NewHandler(cfg)
+	lns := make([]net.Listener, 0, len(cfg.Listeners))
+	for _, l := range cfg.Listeners {
+		ln, err := net.Listen("tcp", l.Addr)
+		if err != nil {
+			slog.Error("listen failed", "addr", l.Addr, "err", err)
+			os.Exit(1)
+		}
+		lns = append(lns, ln)
 	}
-	slog.Info("orbit listening", "addr", srv.Addr, "backends", len(cfg.Backends))
-	slog.Error("server stopped", "err", srv.ListenAndServe())
+
+	errCh := make(chan error, len(lns))
+	for _, ln := range lns {
+		srv := &http.Server{
+			Handler:      handler,
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			IdleTimeout:  30 * time.Second,
+		}
+		slog.Info("orbit listening", "addr", ln.Addr(), "backends", len(cfg.Backends))
+		go func() { errCh <- srv.Serve(ln) }()
+	}
+	slog.Error("server stopped", "err", <-errCh)
 }

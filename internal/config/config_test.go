@@ -28,8 +28,9 @@ backends:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Listen != ":8080" {
-		t.Errorf("listen: want :8080, got %q", cfg.Listen)
+	wantListeners := []Listener{{Addr: ":8080"}}
+	if len(cfg.Listeners) != 1 || cfg.Listeners[0] != wantListeners[0] {
+		t.Errorf("listeners: want %+v, got %+v", wantListeners, cfg.Listeners)
 	}
 	if cfg.Balancer.Algorithm != "round_robin" {
 		t.Errorf("algorithm: want round_robin, got %q", cfg.Balancer.Algorithm)
@@ -53,7 +54,9 @@ backends:
 
 func TestLoadFull(t *testing.T) {
 	cfg, err := Load(writeConfig(t, `
-listen: "127.0.0.1:9000"
+listeners:
+  - addr: "127.0.0.1:9000"
+  - addr: "127.0.0.1:9001"
 balancer:
   algorithm: round_robin
 health_check:
@@ -75,8 +78,8 @@ backends:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Listen != "127.0.0.1:9000" {
-		t.Errorf("listen: got %q", cfg.Listen)
+	if len(cfg.Listeners) != 2 || cfg.Listeners[0].Addr != "127.0.0.1:9000" || cfg.Listeners[1].Addr != "127.0.0.1:9001" {
+		t.Errorf("listeners: got %+v", cfg.Listeners)
 	}
 	if cfg.Backends[0].Name != "zeta" || cfg.Backends[1].Name != "kappa" {
 		t.Errorf("names: got %q, %q", cfg.Backends[0].Name, cfg.Backends[1].Name)
@@ -130,14 +133,15 @@ func TestValidation(t *testing.T) {
 		content string
 		wantErr string
 	}{
-		{"no backends", "listen: \":8080\"\n", "at least one backend"},
+		{"no backends", "listeners:\n  - addr: \":8080\"\n", "at least one backend"},
+		{"no listeners", "listeners: []\nbackends:\n  - host: localhost\n    port: 9001\n", "at least one listener"},
 		{"missing host", "backends:\n  - port: 9001\n", "host: required"},
 		{"port zero", "backends:\n  - host: localhost\n    port: 0\n", "port: must be between"},
 		{"port too big", "backends:\n  - host: localhost\n    port: 70000\n", "port: must be between"},
 		{"bad name", "backends:\n  - name: Bad Name\n    host: localhost\n    port: 9001\n", "must be kebab-case"},
 		{"duplicate names", "backends:\n  - name: a\n    host: localhost\n    port: 9001\n  - name: a\n    host: localhost\n    port: 9002\n", "duplicate"},
 		{"bad algorithm", "balancer:\n  algorithm: random\nbackends:\n  - host: localhost\n    port: 9001\n", "only \"round_robin\" is supported"},
-		{"bad listen", "listen: \"8080\"\nbackends:\n  - host: localhost\n    port: 9001\n", "listen"},
+		{"bad listener addr", "listeners:\n  - addr: \"8080\"\nbackends:\n  - host: localhost\n    port: 9001\n", "listeners[0].addr"},
 		{"zero global interval", "health_check:\n  interval: 0s\nbackends:\n  - host: localhost\n    port: 9001\n", "health_check.interval"},
 		{"bad global path", "health_check:\n  path: health\nbackends:\n  - host: localhost\n    port: 9001\n", "must start with /"},
 		{"bad backend path", "backends:\n  - host: localhost\n    port: 9001\n    health_check:\n      path: ready\n", "must start with /"},

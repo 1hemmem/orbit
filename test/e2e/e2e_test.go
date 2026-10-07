@@ -29,7 +29,6 @@ func startMock(t *testing.T, name string) *httptest.Server {
 func writeConfig(t *testing.T, mocks []*httptest.Server) string {
 	t.Helper()
 	var sb strings.Builder
-	sb.WriteString("listen: \":0\"\n")
 	sb.WriteString("health_check:\n  interval: 50ms\n  timeout: 500ms\n  path: \"/\"\n")
 	sb.WriteString("backends:\n")
 	for i, ts := range mocks {
